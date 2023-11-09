@@ -8,8 +8,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-amqp/pkg/amqp"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 )
 
 func NewSubscriber(cfg *config.MessageQueueConfig) (message.Subscriber, error) {
@@ -47,28 +45,4 @@ func ProcessMessages(messages <-chan *message.Message) {
 		log.Printf("Got message: %s", string(msg.Payload))
 		msg.Ack()
 	}
-}
-
-func NewRouter() (*message.Router, error) {
-	logger := watermill.NewStdLogger(true, false)
-	router, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	router.AddPlugin(plugin.SignalsHandler)
-
-	router.AddMiddleware(
-		middleware.CorrelationID,
-
-		middleware.Retry{
-			MaxRetries:      5,
-			InitialInterval: 500,
-			Logger:          logger,
-		}.Middleware,
-
-		middleware.Recoverer,
-	)
-
-	return router, err
 }

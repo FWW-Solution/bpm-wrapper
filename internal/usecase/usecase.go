@@ -1,129 +1,170 @@
 package usecase
 
 import (
+	"bpm-wrapper/internal/adapter"
 	"bpm-wrapper/internal/config"
-	"bpm-wrapper/internal/data/model"
+	"bpm-wrapper/internal/data/dto"
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
+var mu sync.Mutex
+
 type usecase struct {
-	cache *redis.Client
-	cfg   *config.Config
+	adapter adapter.Adapter
+	cfg     *config.BonitaConfig
+	redis   *redis.Client
 }
 
-// ClaimTaskToUserPoll implements Usecase.
-func (u *usecase) ClaimTaskToUserPoll(ctx context.Context, taskID int64, caseID int64, actorName string) error {
-	// Check Login first to bpm
-	_, err := u.Login(ctx, u.cfg.Bonita.Username, u.cfg.Bonita.Password)
+func (u *usecase) loginUser() (*dto.LoginResponse, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if u.redis.Exists(ctx, "token").Val() != 1 && u.redis.Exists(ctx, "auth").Val() != 1 {
+		token, err := u.adapter.Login(u.cfg.Username, u.cfg.Password)
+		if err != nil {
+			return nil, err
+		}
+
+		u.redis.Set(ctx, "token", token.BonitaToken, 1*time.Hour)
+		u.redis.Set(ctx, "auth", token.BonitaAuth, 1*time.Hour)
+	}
+
+	return &dto.LoginResponse{
+		BonitaToken: u.redis.Get(ctx, "token").Val(),
+		BonitaAuth:  u.redis.Get(ctx, "auth").Val(),
+	}, nil
+}
+
+// GetTaskID(taskName string) (string, error)
+func (u *usecase) GetTaskID(taskName string, caseID int64) (string, error) {
+	token, err := u.loginUser()
+	if err != nil {
+		return "", err
+	}
+
+	task, err := u.adapter.FindTaskByName(token, caseID, taskName)
+	if err != nil {
+		return "", err
+	}
+
+	if task.ID == "" {
+		return "", fmt.Errorf("task not found")
+	}
+
+	return task.ID, nil
+}
+
+// ExecuteHumanTask implements Usecase
+func (u *usecase) ExecuteHumanTask(taskID string, caseID int64, variables interface{}) error {
+	token, err := u.loginUser()
 	if err != nil {
 		return err
 	}
 
-	// err = u.adapter.ClaimTaskToUserPoll(&token, taskID, caseID, actorName)
-	// if err != nil {
-	// 	return err
-	// }
-	return nil
-}
-
-// ExecuteHumanTask implements Usecase.
-func (u *usecase) ExecuteHumanTask(ctx context.Context, taskID int64, caseID int64, variables interface{}) error {
-	// Check Login first to bpm
-	_, err := u.Login(ctx, u.cfg.Bonita.Username, u.cfg.Bonita.Password)
+	err = u.adapter.ExecuteTask(token, taskID, variables)
 	if err != nil {
 		return err
 	}
 
-	// err = u.adapter.ExecuteHumanTask(&token, taskID, caseID, variables)
-	// if err != nil {
-	// 	return err
-	// }
 	return nil
 }
 
-// GetTaskID implements Usecase.
-func (u *usecase) GetTaskID(ctx context.Context, taskName string, caseID int64) (taskID int64, err error) {
-	// Check Login first to bpm
-	_, err = u.Login(ctx, u.cfg.Bonita.Username, u.cfg.Bonita.Password)
+// AssignHumanTask implements Usecase
+func (u *usecase) AssignHumanTask(taskID string, caseID int64, actorName string) error {
+	token, err := u.loginUser()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	// task, err := u.adapter.FindTaskByName(&token, caseID, taskName)
-	// if err != nil {
-	// 	return "", err
-	// }
-	return 0, nil
-}
-
-// Login implements Usecase.
-func (u *usecase) Login(ctx context.Context, username string, password string) (loginModel interface{}, err error) {
-	if u.cache.Exists(ctx, "token_bonita").Val() != 1 && u.cache.Exists(ctx, "auth_bonita").Val() != 1 {
-		loginResult := model.LoginBonitaBPM{}
-		// token, err := u.adapter.Login(u.cfg.Username, u.cfg.Password)
-		// if err != nil {
-		// 	return "", err
-		// }
-
-		u.cache.Set(ctx, "token", loginResult.BonitaToken, time.Duration(u.cfg.Bonita.LoginCacheDuration)*time.Hour)
-		u.cache.Set(ctx, "auth", loginResult.BonitaAuth, time.Duration(u.cfg.Bonita.LoginCacheDuration)*time.Hour)
-	}
-
-	loginModel = model.LoginBonitaBPM{
-		BonitaToken: u.cache.Get(ctx, "token_bonita").Val(),
-		BonitaAuth:  u.cache.Get(ctx, "auth_bonita").Val(),
-	}
-
-	return loginModel, nil
-
-}
-
-// Logout implements Usecase.
-func (*usecase) Logout(ctx context.Context) error {
-	panic("unimplemented")
-}
-
-// RecordCurrentTask implements Usecase.
-func (*usecase) RecordCurrentTask(ctx context.Context, taskID int64, caseID int64) error {
-	panic("unimplemented")
-}
-
-// StartProcess implements Usecase.
-func (u *usecase) StartProcess(ctx context.Context, version string) (caseID int64, err error) {
-	// Check Login first to bpm
-	_, err = u.Login(ctx, u.cfg.Bonita.Username, u.cfg.Bonita.Password)
+	result, err := u.adapter.FindUser(token, actorName)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	// processID, err := u.adapter.FindProcessIDByVersion(&token, version)
-	// if err != nil {
-	// 	return "", err
+	err = u.adapter.AssignTask(token, taskID, result[0].ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+var ctx = context.Background()
+
+// UpdateHumanProcess implements Usecase
+func (u *usecase) UpdateHumanProcess(taskID string, variables interface{}) error {
+	token, err := u.loginUser()
+	if err != nil {
+		return err
+	}
+
+	err = u.adapter.ExecuteTask(token, taskID, variables)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// StartProcess implements Usecase
+func (u *usecase) StartProcess(version string) (string, error) {
+	token, err := u.loginUser()
+	if err != nil {
+		return "", err
+	}
+
+	// check if variables if not empty
+	// TODO: Broken need check further
+	// if len(variables["process_id"].(string)) > 0 {
+	// 	result, err := u.adapter.CreateProcessInstance(&token, variables["process_id"].(string), variables)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	return result, nil
 	// }
 
-	// caseID, err = u.adapter.StartProcess(&token, processID)
-	// if err != nil {
-	// 	return "", err
-	// }
-	return 0, nil
+	processId, err := u.adapter.FindProcess(token, version)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := u.adapter.CreateProcessInstance(token, processId, nil)
+	if err != nil {
+		return "", err
+	}
+	return result, nil
+}
+
+// StopProcess implements Usecase
+func (*usecase) StopProcess(token string, processId string) error {
+	panic("unimplemented")
 }
 
 type Usecase interface {
-	Login(ctx context.Context, username string, password string) (loginModel interface{}, err error)
-	Logout(ctx context.Context) error
-	ExecuteHumanTask(ctx context.Context, taskID int64, caseID int64, variables interface{}) error
-	StartProcess(ctx context.Context, version string) (caseID int64, err error)
-	GetTaskID(ctx context.Context, taskName string, caseID int64) (taskID int64, err error)
-	ClaimTaskToUserPoll(ctx context.Context, taskID int64, caseID int64, actorName string) error
-	RecordCurrentTask(ctx context.Context, taskID int64, caseID int64) error
+	// StartProcess
+	StartProcess(version string) (string, error)
+	// StopProcess
+	StopProcess(token string, processId string) error
+	// Update Human Process
+	UpdateHumanProcess(processId string, variables interface{}) error
+	// Assign Human Task
+	AssignHumanTask(taskID string, caseID int64, userID string) error
+	// ExecuteHumanTask
+	ExecuteHumanTask(taskID string, caseID int64, variables interface{}) error
+	// GetTaskID
+	GetTaskID(taskName string, caseID int64) (string, error)
 }
 
-func NewBonitaBPM(cache *redis.Client, cfg *config.Config) Usecase {
+func NewUsecase(adapter *adapter.Adapter, cfg *config.BonitaConfig, redis *redis.Client) Usecase {
 	return &usecase{
-		cache: cache,
-		cfg:   cfg,
+		adapter: *adapter,
+		cfg:     cfg,
+		redis:   redis,
 	}
 }

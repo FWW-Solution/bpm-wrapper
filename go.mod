@@ -22,6 +22,7 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.3.5
 	github.com/ThreeDotsLabs/watermill-amqp v1.1.4
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/goccy/go-json v0.10.2
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
