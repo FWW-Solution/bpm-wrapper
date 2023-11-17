@@ -161,7 +161,7 @@ type Usecase interface {
 	GetTaskID(taskName string, caseID int64) (string, error)
 }
 
-func NewUsecase(adapter *adapter.Adapter, cfg *config.BonitaConfig, redis *redis.Client) Usecase {
+func New(adapter *adapter.Adapter, cfg *config.BonitaConfig, redis *redis.Client) Usecase {
 	return &usecase{
 		adapter: *adapter,
 		cfg:     cfg,

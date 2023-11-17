@@ -8,10 +8,16 @@ import (
 
 type Config struct {
 	Cache       *RedisConfig
-	ServiceName string `json:"service_name"`
-	IsVerbose   bool   `json:"is_verbose"`
-	Queue       *MessageQueueConfig
-	Bonita      *BonitaConfig
+	ServiceName string              `json:"service_name"`
+	IsVerbose   bool                `json:"is_verbose"`
+	HttpServer  HttpServerConfig    `mapstructure:"http_server"`
+	Queue       *MessageQueueConfig `json:"queue"`
+	Bonita      *BonitaConfig       `json:"bonita"`
+}
+
+type HttpServerConfig struct {
+	Host string `mapstructure:"host"`
+	Port string `mapstructure:"port"`
 }
 
 type BonitaConfig struct {

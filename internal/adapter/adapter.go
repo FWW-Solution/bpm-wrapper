@@ -41,10 +41,9 @@ type Adapter interface {
 	FindTaskByName(auth *dto.LoginResponse, caseID int64, taskName string) (dto.FindTaskByNameResponse, error)
 }
 
-func NewAdapter(client *http.Client, cfg *config.BonitaConfig, cfgBonita *config.BonitaConfig) Adapter {
+func New(client *http.Client, cfgBonita *config.BonitaConfig) Adapter {
 	return &adapter{
 		client:    client,
-		cfg:       cfg,
 		cfgBonita: cfgBonita,
 	}
 }

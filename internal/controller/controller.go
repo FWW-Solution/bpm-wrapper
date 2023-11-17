@@ -12,11 +12,11 @@ import (
 
 type Controller struct {
 	UseCase usecase.Usecase
-	log     *zap.SugaredLogger
-	pub     message.Publisher
+	Log     *zap.SugaredLogger
+	Pub     message.Publisher
 }
 
-func (c *Controller) StartProcess(msg *message.Message) error {
+func (c *Controller) StartProcessPassangerHandler(msg *message.Message) error {
 	// var body dto.StartProcessRequest
 	var body dto.StartProcessRequest
 
@@ -31,7 +31,7 @@ func (c *Controller) StartProcess(msg *message.Message) error {
 		log.Println(err)
 		msg.Ack()
 	} else {
-		c.pub.Publish("process_started", message.NewMessage(msg.UUID, []byte(result)))
+		c.Pub.Publish("process_started", message.NewMessage(msg.UUID, []byte(result)))
 		msg.Ack()
 	}
 

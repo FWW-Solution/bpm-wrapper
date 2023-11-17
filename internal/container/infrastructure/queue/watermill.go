@@ -1,7 +1,8 @@
 package queue
 
 import (
-	"log"
+	"os"
+	"strconv"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -9,17 +10,36 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 )
 
-func NewRouter(router *message.Router, handlerTopicExchange string, subscribeTopic string, subscriber message.Subscriber, handlerFunc func(msg *message.Message) error) (*message.Router, error) {
-	logger := watermill.NewStdLogger(true, false)
+var (
+	stateLog, _ = strconv.ParseBool(os.Getenv("PRODUCTION"))
+)
+
+type MessageStream interface {
+	NewSubscriber() (message.Subscriber, error)
+	NewPublisher() (message.Publisher, error)
+}
+
+func NewRouter(pub message.Publisher, poisonTopic string, handlerTopicName string, subscribeTopic string, subs message.Subscriber, handlerFunc func(msg *message.Message) error) (*message.Router, error) {
+	logger := watermill.NewStdLogger(stateLog, stateLog)
 	router, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	router.AddPlugin(plugin.SignalsHandler)
 
+	poisonMiddleware, err := middleware.PoisonQueue(
+		pub,
+		poisonTopic,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
 	router.AddMiddleware(
 		middleware.CorrelationID,
+		poisonMiddleware,
 
 		middleware.Retry{
 			MaxRetries:      5,
@@ -27,48 +47,51 @@ func NewRouter(router *message.Router, handlerTopicExchange string, subscribeTop
 			Logger:          logger,
 		}.Middleware,
 
+		middleware.CorrelationID,
 		middleware.Recoverer,
 	)
 
 	router.AddNoPublisherHandler(
-		handlerTopicExchange,
+		handlerTopicName,
 		subscribeTopic,
-		subscriber,
+		subs,
 		handlerFunc,
 	)
-
-	return router, err
-}
-
-func NewRouterWithPublisher(router *message.Router, handlerTopicExchange string, subscribeTopic string, subscriber message.Subscriber, publishTopic string, publisher message.Publisher, handlerFunc func(msg *message.Message) ([]*message.Message, error)) (*message.Router, error) {
-	logger := watermill.NewStdLogger(true, false)
-	router, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	router.AddPlugin(plugin.SignalsHandler)
 
-	router.AddMiddleware(
-		middleware.CorrelationID,
-
-		middleware.Retry{
-			MaxRetries:      5,
-			InitialInterval: 500,
-			Logger:          logger,
-		}.Middleware,
-
-		middleware.Recoverer,
-	)
-
-	router.AddHandler(
-		handlerTopicExchange,
-		subscribeTopic,
-		subscriber,
-		publishTopic,
-		publisher,
-		handlerFunc,
-	)
-
 	return router, err
 }
+
+// func NewRouterWithPublisher(router *message.Router, handlerTopicExchange string, subscribeTopic string, subscriber message.Subscriber, publishTopic string, publisher message.Publisher, handlerFunc func(msg *message.Message) ([]*message.Message, error)) (*message.Router, error) {
+// 	logger := watermill.NewStdLogger(true, false)
+// 	router, err := message.NewRouter(message.RouterConfig{}, logger)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	router.AddPlugin(plugin.SignalsHandler)
+
+// 	router.AddMiddleware(
+// 		middleware.CorrelationID,
+
+// 		middleware.Retry{
+// 			MaxRetries:      5,
+// 			InitialInterval: 500,
+// 			Logger:          logger,
+// 		}.Middleware,
+
+// 		middleware.Recoverer,
+// 	)
+
+// 	router.AddHandler(
+// 		handlerTopicExchange,
+// 		subscribeTopic,
+// 		subscriber,
+// 		publishTopic,
+// 		publisher,
+// 		handlerFunc,
+// 	)
+
+// 	return router, err
+// }
