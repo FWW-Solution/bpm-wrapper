@@ -10,13 +10,23 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
-func NewSubscriber(cfg *config.MessageQueueConfig) (message.Subscriber, error) {
-	ampqURI := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+type ampq struct {
+	cfg *config.MessageStreamConfig
+}
+
+func NewAmpq(cfg *config.MessageStreamConfig) MessageStream {
+	return &ampq{
+		cfg: cfg,
+	}
+}
+
+func (m *ampq) NewSubscriber() (message.Subscriber, error) {
+	ampqURI := fmt.Sprintf("amqp://%s:%s@%s:%s/", m.cfg.Username, m.cfg.Password, m.cfg.Host, m.cfg.Port)
 	ampqConfig := amqp.NewDurableQueueConfig(ampqURI)
 
 	subscriber, err := amqp.NewSubscriber(
 		ampqConfig,
-		watermill.NewStdLogger(true, true),
+		watermill.NewStdLogger(stateLog, stateLog),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -25,13 +35,13 @@ func NewSubscriber(cfg *config.MessageQueueConfig) (message.Subscriber, error) {
 	return subscriber, err
 }
 
-func NewPublisher(cfg *config.MessageQueueConfig) (message.Publisher, error) {
-	ampqURI := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+func (m *ampq) NewPublisher() (message.Publisher, error) {
+	ampqURI := fmt.Sprintf("amqp://%s:%s@%s:%s/", m.cfg.Username, m.cfg.Password, m.cfg.Host, m.cfg.Port)
 	ampqConfig := amqp.NewDurableQueueConfig(ampqURI)
 
 	publisher, err := amqp.NewPublisher(
 		ampqConfig,
-		watermill.NewStdLogger(true, true),
+		watermill.NewStdLogger(stateLog, stateLog),
 	)
 	if err != nil {
 		log.Fatal(err)

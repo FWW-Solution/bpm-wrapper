@@ -4,11 +4,14 @@ import (
 	"bpm-wrapper/internal/adapter"
 	"bpm-wrapper/internal/config"
 	"bpm-wrapper/internal/container/infrastructure/cache"
+	"bpm-wrapper/internal/container/infrastructure/database"
 	"bpm-wrapper/internal/container/infrastructure/http"
 	"bpm-wrapper/internal/container/infrastructure/http/router"
+	httpclient "bpm-wrapper/internal/container/infrastructure/http_client"
 	logger "bpm-wrapper/internal/container/infrastructure/log"
 	"bpm-wrapper/internal/container/infrastructure/queue"
 	"bpm-wrapper/internal/controller"
+	"bpm-wrapper/internal/repository"
 	"bpm-wrapper/internal/usecase"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -17,31 +20,43 @@ import (
 
 func InitService(cfg *config.Config) (*fiber.App, []message.Router) {
 
+	// Init DB
+	db := database.GetConnection(&cfg.Database)
 	// init redis
-	clientRedis := cache.SetupRedis(cfg.Cache)
+	clientRedis := cache.SetupRedis(&cfg.Cache)
 	// init redis cache
 	cache.InitRedisClient(clientRedis)
 	// Init Logger
 	log := logger.Initialize(cfg)
 	// Init HTTP Server
 	server := http.SetupHttpEngine()
+
+	amqpMessageStream := queue.NewAmpq(&cfg.Queue)
 	// set message stream subscriber
-	sub, err := queue.NewSubscriber(cfg.Queue)
+	sub, err := amqpMessageStream.NewSubscriber()
 	if err != nil {
 		panic(err)
 	}
 
 	// set message stream publisher
-	pub, err := queue.NewPublisher(cfg.Queue)
+	pub, err := amqpMessageStream.NewPublisher()
 	if err != nil {
 		panic(err)
 	}
 
+	// Init Circuit Breaker
+	cb := httpclient.InitCircuitBreaker(&cfg.HttpClient, "consecutive")
+	// Init HTTP Client
+	client := httpclient.InitHttpClient(&cfg.HttpClient, cb)
+
 	// Init Adapter
-	adapter := adapter.New(nil, cfg.Bonita)
+	adapter := adapter.New(client, &cfg.Bonita)
+
+	// Init Repository
+	repo := repository.New(db)
 
 	// Init UseCase
-	usecase := usecase.New(&adapter, cfg.Bonita, clientRedis)
+	usecase := usecase.New(&adapter, &cfg.Bonita, clientRedis, pub, repo)
 
 	// Init Controller
 	ctrl := controller.Controller{UseCase: usecase, Log: log, Pub: pub}

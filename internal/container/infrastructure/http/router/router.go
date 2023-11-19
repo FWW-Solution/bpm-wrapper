@@ -12,7 +12,13 @@ func Initialize(app *fiber.App, ctrl *controller.Controller) *fiber.App {
 
 	Api := app.Group("/api")
 
-	_ = Api.Group("/private/v1")
+	v1 := Api.Group("/private/v1")
+
+	// bpm
+	v1.Post("/workflow", ctrl.SaveWorkflow)
+
+	// passanger
+	v1.Put("/passenger", ctrl.UpdatePassenger)
 
 	return app
 

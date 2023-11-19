@@ -6,23 +6,25 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/goccy/go-json"
+	circuit "github.com/rubyist/circuitbreaker"
 )
 
 type Adapter interface {
 	// Login
-	Login(username string, password string) (*dto.LoginResponse, error)
+	Login(username string, password string) (dto.LoginResponse, error)
 	// Logout
 	Logout(auth *dto.LoginResponse) error
 	// StartProcess
-	CreateProcessInstance(auth *dto.LoginResponse, processId string, variables map[string]interface{}) (string, error)
+	CreateProcessInstance(auth *dto.LoginResponse, processId string, variables []byte) (string, error)
 	// FindProcess
-	FindProcess(auth *dto.LoginResponse, version string) (string, error)
+	FindProcess(auth *dto.LoginResponse, processName string, version string) (string, error)
 	// FindCaseByID
 	FindCaseByID(auth *dto.LoginResponse, caseId int64) (dto.FindCaseByIDResponse, error)
 	// FindArchivedTasks
@@ -39,9 +41,11 @@ type Adapter interface {
 	QueryBusinessData(auth *dto.LoginResponse, query string) ([]dto.QueryBusinessDataResponse, error)
 	// FindTaskByName
 	FindTaskByName(auth *dto.LoginResponse, caseID int64, taskName string) (dto.FindTaskByNameResponse, error)
+
+	// Passenger
 }
 
-func New(client *http.Client, cfgBonita *config.BonitaConfig) Adapter {
+func New(client *circuit.HTTPClient, cfgBonita *config.BonitaConfig) Adapter {
 	return &adapter{
 		client:    client,
 		cfgBonita: cfgBonita,
@@ -49,8 +53,7 @@ func New(client *http.Client, cfgBonita *config.BonitaConfig) Adapter {
 }
 
 type adapter struct {
-	client    *http.Client
-	cfg       *config.BonitaConfig
+	client    *circuit.HTTPClient
 	cfgBonita *config.BonitaConfig
 }
 
@@ -58,7 +61,7 @@ type adapter struct {
 func (a *adapter) FindTaskByName(auth *dto.LoginResponse, caseID int64, taskName string) (dto.FindTaskByNameResponse, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s%s%d", host, port, "/bonita/API/bpm/humanTask?p=0&c=1&f=name=", url.QueryEscape(taskName), "&f=caseId=", caseID)
+	url := fmt.Sprintf("http://%s:%s%s%s%s%d", host, port, "/bonita/API/bpm/humanTask?p=0&c=1&f=name=", url.QueryEscape(taskName), "&f=caseId=", caseID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -98,7 +101,7 @@ func (a *adapter) FindTaskByName(auth *dto.LoginResponse, caseID int64, taskName
 func (a *adapter) FindUser(auth *dto.LoginResponse, userName string) ([]dto.FindUserResponse, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s", host, port, "/bonita/API/identity/user?c=20&p=0&f=userName=", userName)
+	url := fmt.Sprintf("http://%s:%s%s%s", host, port, "/bonita/API/identity/user?c=20&p=0&f=userName=", userName)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -130,7 +133,7 @@ func (a *adapter) FindUser(auth *dto.LoginResponse, userName string) ([]dto.Find
 func (a *adapter) ExecuteTask(auth *dto.LoginResponse, taskID string, variables interface{}) error {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s%s", host, port, "/bonita/API/bpm/userTask/", taskID, "/execution?assign=true")
+	url := fmt.Sprintf("http://%s:%s%s%s%s", host, port, "/bonita/API/bpm/userTask/", taskID, "/execution?assign=true")
 
 	body, err := json.Marshal(variables)
 	if err != nil {
@@ -193,7 +196,7 @@ func (a *adapter) FindCaseByID(auth *dto.LoginResponse, caseId int64) (dto.FindC
 	var caseData dto.FindCaseByIDResponse
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%d", host, port, "/bonita/API/bpm/case/", caseId)
+	url := fmt.Sprintf("http://%s:%s%s%d", host, port, "/bonita/API/bpm/case/", caseId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -229,7 +232,7 @@ func (a *adapter) FindTasksByID(auth *dto.LoginResponse, taskId string) (dto.Fin
 	var task dto.FindTasksByIDResponse
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s", host, port, "/bonita/API/bpm/task/", taskId)
+	url := fmt.Sprintf("http://%s:%s%s%s", host, port, "/bonita/API/bpm/task/", taskId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -260,7 +263,7 @@ func (a *adapter) FindTasksByID(auth *dto.LoginResponse, taskId string) (dto.Fin
 }
 
 // Login implements Adapter
-func (a *adapter) Login(username string, password string) (*dto.LoginResponse, error) {
+func (a *adapter) Login(username string, password string) (dto.LoginResponse, error) {
 
 	value := url.Values{
 		"username": {a.cfgBonita.Username},
@@ -269,33 +272,34 @@ func (a *adapter) Login(username string, password string) (*dto.LoginResponse, e
 
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s", host, port, "/bonita/loginservice")
+	url := fmt.Sprintf("http://%s:%s%s", host, port, "/bonita/loginservice")
 
 	response, err := a.client.PostForm(url, value)
 	if err != nil {
-		return nil, err
+		log.Println("error login adapter", err)
+		return dto.LoginResponse{}, err
 	}
 
-	var bonita_token string
-	var bonita_auth string
+	var bonitaToken string
+	var bonitaAuth string
 
 	retrieveCookie := response.Cookies()
 
 	for _, cookie := range retrieveCookie {
 		if cookie.Name == "X-Bonita-API-Token" {
-			bonita_token = cookie.Value
+			bonitaToken = cookie.Value
 		}
 		if cookie.Name == "JSESSIONID" {
-			bonita_auth = cookie.Value
+			bonitaAuth = cookie.Value
 		}
 	}
 
 	bonitaResponse := dto.LoginResponse{
-		BonitaToken: bonita_token,
-		BonitaAuth:  bonita_auth,
+		BonitaToken: bonitaToken,
+		BonitaAuth:  bonitaAuth,
 	}
 
-	return &bonitaResponse, nil
+	return bonitaResponse, nil
 }
 
 // Logout implements Adapter
@@ -303,7 +307,7 @@ func (a *adapter) Logout(auth *dto.LoginResponse) error {
 
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s", host, port, "/bonita/logoutservice?redirect=false")
+	url := fmt.Sprintf("http://%s:%s%s", host, port, "/bonita/logoutservice?redirect=false")
 
 	request, err := http.NewRequest("GET", url, nil)
 	request.Header.Set("X-Bonita-API-Token", auth.BonitaToken)
@@ -321,17 +325,19 @@ func (a *adapter) Logout(auth *dto.LoginResponse) error {
 }
 
 // CreateProcessInstance implements Adapter
-func (a *adapter) CreateProcessInstance(auth *dto.LoginResponse, processId string, variables map[string]interface{}) (string, error) {
+func (a *adapter) CreateProcessInstance(auth *dto.LoginResponse, processId string, variables []byte) (string, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s", host, port, "/bonita/API/bpm/process/"+processId+"/instantiation")
+	url := fmt.Sprintf("http://%s:%s%s", host, port, "/bonita/API/bpm/process/"+processId+"/instantiation")
 
-	request, err := http.NewRequest("POST", url, nil)
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(variables))
 	request.Header.Set("X-Bonita-API-Token", auth.BonitaToken)
 	request.Header.Set("Cookie", "JSESSIONID="+auth.BonitaAuth)
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Println("request", request)
 
 	response, err := a.client.Do(request)
 	if err != nil {
@@ -339,6 +345,8 @@ func (a *adapter) CreateProcessInstance(auth *dto.LoginResponse, processId strin
 	}
 
 	defer response.Body.Close()
+
+	fmt.Println("response status code", response.StatusCode)
 
 	responseData, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -353,14 +361,13 @@ func (a *adapter) CreateProcessInstance(auth *dto.LoginResponse, processId strin
 	}
 
 	return strconv.Itoa(int(responseBody.CaseID)), nil
-
 }
 
 // FindProcess implements Adapter
-func (a *adapter) FindProcess(auth *dto.LoginResponse, version string) (string, error) {
+func (a *adapter) FindProcess(auth *dto.LoginResponse, processName string, version string) (string, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s", host, port, "/bonita/API/bpm/process?p=0&c=20&f=name=TMS&f=version=", version)
+	url := fmt.Sprintf("http://%s:%s/bonita/API/bpm/process?p=0&c=20&f=name=%s&f=version=%s", host, port, processName, version)
 	request, err := http.NewRequest("GET", url, nil)
 	request.Header.Set("X-Bonita-API-Token", auth.BonitaToken)
 	request.Header.Set("Cookie", "JSESSIONID="+auth.BonitaAuth)
@@ -394,7 +401,7 @@ func (a *adapter) FindProcess(auth *dto.LoginResponse, version string) (string, 
 func (a *adapter) FindArchivedTasks(auth *dto.LoginResponse, processId string) ([]dto.FindArchivedTasksResponse, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s", host, port, "/bonita/API/bpm/archivedTask?p=0&c=20")
+	url := fmt.Sprintf("http://%s:%s%s", host, port, "/bonita/API/bpm/archivedTask?p=0&c=20")
 	request, err := http.NewRequest("GET", url, nil)
 	request.Header.Set("X-Bonita-API-Token", auth.BonitaToken)
 	request.Header.Set("Cookie", "JSESSIONID="+auth.BonitaAuth)
@@ -429,7 +436,7 @@ func (a *adapter) FindArchivedTasks(auth *dto.LoginResponse, processId string) (
 func (a *adapter) QueryBusinessData(auth *dto.LoginResponse, query string) ([]dto.QueryBusinessDataResponse, error) {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s", host, port, "/bonita/API/bdm/businessData/com.company.model.Ticket?q="+query)
+	url := fmt.Sprintf("http://%s:%s%s", host, port, "/bonita/API/bdm/businessData/com.company.model.Ticket?q="+query)
 	request, err := http.NewRequest("GET", url, nil)
 	request.Header.Set("X-Bonita-API-Token", auth.BonitaToken)
 	request.Header.Set("Cookie", "JSESSIONID="+auth.BonitaAuth)
