@@ -2,7 +2,6 @@ package usecase
 
 import (
 	dtoticket "bpm-wrapper/internal/data/dto_ticket"
-	"fmt"
 	"log"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -54,8 +53,6 @@ func (u *usecase) RedeemTicket(body *dtoticket.RequestRedeemTicketToBPM) error {
 		return err
 	}
 
-	fmt.Println("task", task.ID)
-	fmt.Println("json Body", jsonBody)
 	err = u.adapter.ExecuteTask(&token, task.ID, jsonBody)
 	if err != nil {
 		log.Println("Error ExecuteTask", err)
