@@ -8,10 +8,24 @@ import (
 
 type Repository interface {
 	SaveWorkflow(workflow *entity.Workflow) error
+	FindLatestTaskByCaseID(caseID int64) (entity.Workflow, error)
 }
 
 type repository struct {
 	db *sqlx.DB
+}
+
+// FindLatestTaskByCaseID implements Repository.
+func (r *repository) FindLatestTaskByCaseID(caseID int64) (entity.Workflow, error) {
+	query := `SELECT * FROM workflow WHERE case_id = $1 ORDER BY created_at DESC LIMIT 1`
+
+	var workflow entity.Workflow
+	err := r.db.Select(&workflow, query, caseID)
+	if err != nil {
+		return entity.Workflow{}, err
+	}
+
+	return workflow, nil
 }
 
 // SaveWorkflow implements Repository.

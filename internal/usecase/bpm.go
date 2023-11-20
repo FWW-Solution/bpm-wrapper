@@ -54,7 +54,7 @@ func (u *usecase) GetTaskID(taskName string, caseID int64) (string, error) {
 }
 
 // ExecuteHumanTask implements Usecase
-func (u *usecase) ExecuteHumanTask(taskID string, caseID int64, variables interface{}) error {
+func (u *usecase) ExecuteHumanTask(taskID string, caseID int64, variables []byte) error {
 	token, err := u.loginUser()
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (u *usecase) ExecuteHumanTask(taskID string, caseID int64, variables interf
 }
 
 // AssignHumanTask implements Usecase
-func (u *usecase) AssignHumanTask(taskID string, caseID int64, actorName string) error {
+func (u *usecase) AssignHumanTask(taskID int64, caseID int64, actorName string) error {
 	token, err := u.loginUser()
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (u *usecase) AssignHumanTask(taskID string, caseID int64, actorName string)
 var ctx = context.Background()
 
 // UpdateHumanProcess implements Usecase
-func (u *usecase) UpdateHumanProcess(taskID string, variables interface{}) error {
+func (u *usecase) UpdateHumanProcess(taskID string, variables []byte) error {
 	token, err := u.loginUser()
 	if err != nil {
 		return err

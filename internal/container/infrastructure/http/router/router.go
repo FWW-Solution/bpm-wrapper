@@ -16,9 +16,13 @@ func Initialize(app *fiber.App, ctrl *controller.Controller) *fiber.App {
 
 	// bpm
 	v1.Post("/workflow", ctrl.SaveWorkflow)
+	v1.Post("/assign-human-task", ctrl.AssignHumanTask)
 
 	// passanger
 	v1.Put("/passenger", ctrl.UpdatePassenger)
+
+	// payment
+	v1.Post("/payment/invoice", ctrl.GenerateInvoice)
 
 	return app
 

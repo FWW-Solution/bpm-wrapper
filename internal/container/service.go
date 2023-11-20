@@ -18,7 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func InitService(cfg *config.Config) (*fiber.App, []message.Router) {
+func InitService(cfg *config.Config) (*fiber.App, []*message.Router) {
 
 	// Init DB
 	db := database.GetConnection(&cfg.Database)
@@ -62,14 +62,24 @@ func InitService(cfg *config.Config) (*fiber.App, []message.Router) {
 	ctrl := controller.Controller{UseCase: usecase, Log: log, Pub: pub}
 
 	// Init router
-	var messageRouters []message.Router
+	var messageRouters []*message.Router
 
 	startProcessPassangerRouter, err := queue.NewRouter(pub, "start_process_passanger_poison", "start_process_passanger", "start_process_passanger", sub, ctrl.StartProcessPassangerHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	messageRouters = append(messageRouters, *startProcessPassangerRouter)
+	startProcessBookingRouter, err := queue.NewRouter(pub, "start_process_booking_poison", "start_process_booking", "start_process_booking", sub, ctrl.StartProcessBookingHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	doPaymentRouter, err := queue.NewRouter(pub, "do_payment_bpm_poison", "do_payment_bpm_handler", "do_payment_bpm", sub, ctrl.DoPaymentHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	messageRouters = append(messageRouters, startProcessPassangerRouter, startProcessBookingRouter, doPaymentRouter)
 
 	// Init Router
 	app := router.Initialize(server, &ctrl)

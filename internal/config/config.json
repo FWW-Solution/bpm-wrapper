@@ -59,7 +59,7 @@
     },
     "bonita": {
         "Host": "localhost",
-        "Port": "31395",
+        "Port": "15425",
         "Username": "Application",
         "Password": "bpm",
         "Timeout": 30,

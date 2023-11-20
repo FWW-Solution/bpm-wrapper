@@ -32,11 +32,11 @@ type Adapter interface {
 	// FindTasksByID
 	FindTasksByID(auth *dto.LoginResponse, taskId string) (dto.FindTasksByIDResponse, error)
 	// Assign Task
-	AssignTask(auth *dto.LoginResponse, taskId string, userId string) error
+	AssignTask(auth *dto.LoginResponse, taskId int64, userId string) error
 	// Find Actor
 	FindUser(auth *dto.LoginResponse, userName string) ([]dto.FindUserResponse, error)
 	// Execute Task
-	ExecuteTask(auth *dto.LoginResponse, taskID string, variables interface{}) error
+	ExecuteTask(auth *dto.LoginResponse, taskID string, variables []byte) error
 	// QueryBusinessData
 	QueryBusinessData(auth *dto.LoginResponse, query string) ([]dto.QueryBusinessDataResponse, error)
 	// FindTaskByName
@@ -130,17 +130,12 @@ func (a *adapter) FindUser(auth *dto.LoginResponse, userName string) ([]dto.Find
 }
 
 // ExecuteTask implements Adapter
-func (a *adapter) ExecuteTask(auth *dto.LoginResponse, taskID string, variables interface{}) error {
+func (a *adapter) ExecuteTask(auth *dto.LoginResponse, taskID string, variables []byte) error {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
 	url := fmt.Sprintf("http://%s:%s%s%s%s", host, port, "/bonita/API/bpm/userTask/", taskID, "/execution?assign=true")
 
-	body, err := json.Marshal(variables)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(variables))
 	if err != nil {
 		return err
 	}
@@ -159,10 +154,10 @@ func (a *adapter) ExecuteTask(auth *dto.LoginResponse, taskID string, variables 
 }
 
 // AssignTask implements Adapter
-func (a *adapter) AssignTask(auth *dto.LoginResponse, taskId string, userId string) error {
+func (a *adapter) AssignTask(auth *dto.LoginResponse, taskId int64, userId string) error {
 	host := a.cfgBonita.Host
 	port := a.cfgBonita.Port
-	url := fmt.Sprintf("%s:%s%s%s", host, port, "/bonita/API/bpm/userTask/", taskId)
+	url := fmt.Sprintf("http://%s:%s%s%d", host, port, "/bonita/API/bpm/userTask/", taskId)
 
 	requestBody := dto.AssignTaskRequest{
 		AssignedID: userId,

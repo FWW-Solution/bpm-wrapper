@@ -42,7 +42,7 @@ type UpdateHumanProcessRequest struct {
 }
 
 type AssignHumanTaskRequest struct {
-	TaskID string `json:"task_id" validate:"required" example:"1"`
+	TaskID int64  `json:"task_id" validate:"required" example:"1"`
 	CaseID int64  `json:"case_id" validate:"required" example:"1"`
 	Actor  string `json:"actor" validate:"required" example:"L0"`
 }

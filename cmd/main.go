@@ -17,7 +17,7 @@ func main() {
 
 	for _, router := range messageRouters {
 		ctx := context.Background()
-		go func(router message.Router) {
+		go func(router *message.Router) {
 			err := router.Run(ctx)
 			if err != nil {
 				log.Fatal(err)
