@@ -35,7 +35,7 @@ func (c *Controller) DoPaymentHandler(msg *message.Message) error {
 		c.Log.Error(err)
 	}
 
-	err = c.UseCase.DoPayment(body)
+	err = c.UseCase.DoPayment(&body)
 
 	if err != nil {
 		c.Log.Error(err)
@@ -43,4 +43,22 @@ func (c *Controller) DoPaymentHandler(msg *message.Message) error {
 	}
 
 	return err
+}
+
+func (c *Controller) UpdatePayment(ctx *fiber.Ctx) error {
+	var body dtopayment.RequestUpdatePayment
+
+	err := ctx.BodyParser(&body)
+	if err != nil {
+		c.Log.Error(err)
+		return err
+	}
+
+	err = c.UseCase.UpdatePayment(&body)
+	if err != nil {
+		c.Log.Error(err)
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(nil)
 }

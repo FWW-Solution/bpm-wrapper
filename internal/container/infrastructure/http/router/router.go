@@ -23,6 +23,7 @@ func Initialize(app *fiber.App, ctrl *controller.Controller) *fiber.App {
 
 	// payment
 	v1.Post("/payment/invoice", ctrl.GenerateInvoice)
+	v1.Put("/payment", ctrl.UpdatePayment)
 
 	return app
 

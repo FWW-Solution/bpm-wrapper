@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bpm-wrapper/internal/entity"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -17,15 +18,22 @@ type repository struct {
 
 // FindLatestTaskByCaseID implements Repository.
 func (r *repository) FindLatestTaskByCaseID(caseID int64) (entity.Workflow, error) {
-	query := `SELECT * FROM workflow WHERE case_id = $1 ORDER BY created_at DESC LIMIT 1`
+	query := fmt.Sprintf("SELECT case_id, task_name, process_name, is_active, created_at FROM workflow WHERE case_id = '%d' ORDER BY created_at DESC LIMIT 1", caseID)
 
-	var workflow entity.Workflow
-	err := r.db.Select(&workflow, query, caseID)
+	var row entity.Workflow
+	result, err := r.db.Queryx(query)
 	if err != nil {
 		return entity.Workflow{}, err
 	}
 
-	return workflow, nil
+	for result.Next() {
+		err := result.StructScan(&row)
+		if err != nil {
+			return entity.Workflow{}, err
+		}
+	}
+
+	return row, nil
 }
 
 // SaveWorkflow implements Repository.
