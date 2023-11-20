@@ -80,8 +80,6 @@ func (u *usecase) DoPayment(body *dtopayment.DoPaymentRequest) error {
 		return err
 	}
 
-	fmt.Println("task", task)
-
 	err = u.adapter.ExecuteTask(&token, task.ID, jsonBody)
 	if err != nil {
 		log.Println("Error ExecuteTask", err)

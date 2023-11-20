@@ -79,7 +79,12 @@ func InitService(cfg *config.Config) (*fiber.App, []*message.Router) {
 		log.Fatal(err)
 	}
 
-	messageRouters = append(messageRouters, startProcessPassangerRouter, startProcessBookingRouter, doPaymentRouter)
+	redeemTicketRouter, err := queue.NewRouter(pub, "redeem_ticket_bpm_poison", "redeem_ticket_bpm_handler", "redeem_ticket_bpm", sub, ctrl.RedeemTicketHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	messageRouters = append(messageRouters, startProcessPassangerRouter, startProcessBookingRouter, doPaymentRouter, redeemTicketRouter)
 
 	// Init Router
 	app := router.Initialize(server, &ctrl)
