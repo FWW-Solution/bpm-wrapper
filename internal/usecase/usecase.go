@@ -58,6 +58,7 @@ type Usecase interface {
 
 	// Notification
 	SendEmailNotification(body *dtonotification.SendEmailRequest) error
+	SendNotification(body *dtonotification.Request) error
 }
 
 func New(adapter *adapter.Adapter, cfg *config.BonitaConfig, redis *redis.Client, pub message.Publisher, repo repository.Repository) Usecase {

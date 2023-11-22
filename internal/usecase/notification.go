@@ -23,3 +23,18 @@ func (u *usecase) SendEmailNotification(body *dtonotification.SendEmailRequest) 
 
 	return nil
 }
+
+func (u *usecase) SendNotification(body *dtonotification.Request) error {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	id := watermill.NewUUID()
+
+	err = u.pub.Publish("send_notification_from_bpm", message.NewMessage(id, payload))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

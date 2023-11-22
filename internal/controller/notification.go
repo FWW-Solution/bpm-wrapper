@@ -6,15 +6,32 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// func (c *Controller) SendEmailNotification(ctx *fiber.Ctx) error {
+// 	var body dtonotification.SendEmailRequest
+
+// 	if err := ctx.BodyParser(&body); err != nil {
+// 		c.Log.Error(err)
+// 		return err
+// 	}
+
+// 	err := c.UseCase.SendEmailNotification(&body)
+// 	if err != nil {
+// 		c.Log.Error(err)
+// 		return err
+// 	}
+
+// 	return ctx.Status(fiber.StatusOK).JSON("OK")
+// }
+
 func (c *Controller) SendEmailNotification(ctx *fiber.Ctx) error {
-	var body dtonotification.SendEmailRequest
+	var body dtonotification.Request
 
 	if err := ctx.BodyParser(&body); err != nil {
 		c.Log.Error(err)
 		return err
 	}
 
-	err := c.UseCase.SendEmailNotification(&body)
+	err := c.UseCase.SendNotification(&body)
 	if err != nil {
 		c.Log.Error(err)
 		return err

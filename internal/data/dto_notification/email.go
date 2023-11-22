@@ -10,3 +10,8 @@ type SendEmailRequest struct {
 	Body         string   `json:"body" validate:"required"`
 	Attachments  []string `json:"attachments" validate:"required"`
 }
+
+type Request struct {
+	CodeBooking string `json:"code_booking"`
+	Route       string `json:"route"`
+}
