@@ -28,6 +28,9 @@ func Initialize(app *fiber.App, ctrl *controller.Controller) *fiber.App {
 	// ticket
 	v1.Put("/ticket", ctrl.UpdateTicket)
 
+	// notification
+	v1.Post("/notification/email", ctrl.SendEmailNotification)
+
 	return app
 
 }

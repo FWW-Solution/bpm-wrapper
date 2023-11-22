@@ -5,6 +5,7 @@ import (
 	"bpm-wrapper/internal/config"
 	"bpm-wrapper/internal/data/dto"
 	dtobooking "bpm-wrapper/internal/data/dto_booking"
+	dtonotification "bpm-wrapper/internal/data/dto_notification"
 	dtopassenger "bpm-wrapper/internal/data/dto_passenger"
 	dtopayment "bpm-wrapper/internal/data/dto_payment"
 	dtoticket "bpm-wrapper/internal/data/dto_ticket"
@@ -24,7 +25,6 @@ type usecase struct {
 	pub     message.Publisher
 	repo    repository.Repository
 }
-
 
 type Usecase interface {
 	// StartProcess
@@ -55,6 +55,9 @@ type Usecase interface {
 	// Ticket
 	UpdateTicket(body *dtoticket.RequestUpdateTicket) error
 	RedeemTicket(body *dtoticket.RequestRedeemTicketToBPM) error
+
+	// Notification
+	SendEmailNotification(body *dtonotification.SendEmailRequest) error
 }
 
 func New(adapter *adapter.Adapter, cfg *config.BonitaConfig, redis *redis.Client, pub message.Publisher, repo repository.Repository) Usecase {
