@@ -10,13 +10,10 @@ import (
 	dtopayment "bpm-wrapper/internal/data/dto_payment"
 	dtoticket "bpm-wrapper/internal/data/dto_ticket"
 	"bpm-wrapper/internal/repository"
-	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/redis/go-redis/v9"
 )
-
-var mu sync.Mutex
 
 type usecase struct {
 	adapter adapter.Adapter

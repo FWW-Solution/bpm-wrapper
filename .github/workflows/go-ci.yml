@@ -11,7 +11,7 @@ jobs:
   lint:
     strategy:
       matrix:
-        version: [{go: '1.21.1', golangci: 'latest'}]
+        version: [{go: '1.21.3', golangci: 'latest'}]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

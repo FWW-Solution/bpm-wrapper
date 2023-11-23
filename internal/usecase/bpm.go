@@ -3,7 +3,6 @@ package usecase
 import (
 	"bpm-wrapper/internal/data/dto"
 	"bpm-wrapper/internal/entity"
-	"context"
 	"fmt"
 	"log"
 )
@@ -88,8 +87,6 @@ func (u *usecase) AssignHumanTask(taskID int64, caseID int64, actorName string) 
 	return nil
 
 }
-
-var ctx = context.Background()
 
 // UpdateHumanProcess implements Usecase
 func (u *usecase) UpdateHumanProcess(taskID string, variables []byte) error {

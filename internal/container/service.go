@@ -24,8 +24,6 @@ func InitService(cfg *config.Config) (*fiber.App, []*message.Router) {
 	db := database.GetConnection(&cfg.Database)
 	// init redis
 	clientRedis := cache.SetupRedis(&cfg.Cache)
-	// init redis cache
-	cache.InitRedisClient(clientRedis)
 	// Init Logger
 	log := logger.Initialize(cfg)
 	// Init HTTP Server
