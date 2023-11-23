@@ -1,109 +1,92 @@
 package config
 
 import (
+	"log"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
 	Cache       RedisConfig
-	ServiceName string              `mapstructure:"service_name"`
-	IsVerbose   bool                `mapstructure:"is_verbose"`
-	HttpServer  HttpServerConfig    `mapstructure:"http_server"`
-	Queue       MessageStreamConfig `mapstructure:"queue"`
-	Bonita      BonitaConfig        `mapstructure:"bonita"`
-	Database    DatabaseConfig      `mapstructure:"database"`
-	HttpClient  HttpClientConfig    `mapstructure:"http_client"`
+	ServiceName string              `envconfig:"service_name"`
+	IsVerbose   bool                `envconfig:"is_verbose"`
+	HttpServer  HttpServerConfig    `envconfig:"http_server"`
+	Queue       MessageStreamConfig `envconfig:"queue"`
+	Bonita      BonitaConfig        `envconfig:"bonita"`
+	Database    DatabaseConfig      `envconfig:"database"`
+	HttpClient  HttpClientConfig    `envconfig:"http_client"`
 }
 
 type HttpClientConfig struct {
-	Host                string  `mapstructure:"host"`
-	Port                string  `mapstructure:"port"`
-	Timeout             int     `mapstructure:"timeout"`
-	ConsecutiveFailures int     `mapstructure:"consecutive_failures"`
-	ErrorRate           float64 `mapstructure:"error_rate"` // 0.001 - 0.999
-	Threshold           int     `mapstructure:"threshold"`
-	Type                string  `mapstructure:"type"` // consecutive, error_rate
+	Host                string  `envconfig:"http_client_host"`
+	Port                string  `envconfig:"http_client_port"`
+	Timeout             int     `envconfig:"http_client_timeout"`
+	ConsecutiveFailures int     `envconfig:"http_client_consecutive_failures"`
+	ErrorRate           float64 `envconfig:"http_client_error_rate"` // 0.001 - 0.999
+	Threshold           int     `envconfig:"http_client_threshold"`
+	Type                string  `envconfig:"http_client_type"` // consecutive, error_rate
 }
 type DatabaseConfig struct {
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	Username     string `mapstructure:"username"`
-	Password     string `mapstructure:"password"`
-	DBName       string `mapstructure:"db_name"`
-	SSL          string `mapstructure:"ssl"`
-	SchemaName   string `mapstructure:"schema_name"`
-	MaxIdleConns int    `mapstructure:"max_idle_conns"`
-	MaxOpenConns int    `mapstructure:"max_open_conns"`
-	Timeout      int    `mapstructure:"timeout"`
+	Host         string `envconfig:"database_host"`
+	Port         int    `envconfig:"database_port"`
+	Username     string `envconfig:"database_username"`
+	Password     string `envconfig:"database_password"`
+	DBName       string `envconfig:"database_db_name"`
+	SSL          string `envconfig:"database_ssl"`
+	SchemaName   string `envconfig:"database_schema_name"`
+	MaxIdleConns int    `envconfig:"database_max_idle_conns"`
+	MaxOpenConns int    `envconfig:"database_max_open_conns"`
+	Timeout      int    `envconfig:"database_timeout"`
 }
 
 type HttpServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port string `mapstructure:"port"`
+	Host string `envconfig:"http_server_host"`
+	Port string `envconfig:"http_server_port"`
 }
 
 type BonitaConfig struct {
-	Host               string `mapstructure:"host"`
-	Port               string `mapstructure:"port"`
-	Username           string `mapstructure:"username"`
-	Password           string `mapstructure:"password"`
-	Timeout            int    `mapstructure:"timeout"`
-	LoginCacheDuration int    `mapstructure:"login_cache_duration"`
+	Host               string `envconfig:"bonita_host"`
+	Port               string `envconfig:"bonita_port"`
+	Username           string `envconfig:"bonita_username"`
+	Password           string `envconfig:"bonita_password"`
+	Timeout            int    `envconfig:"bonita_timeout"`
+	LoginCacheDuration int    `envconfig:"bonita_login_cache_duration"`
 }
 
 type MessageStreamConfig struct {
-	Host                string `mapstructure:"host"`
-	Port                string `mapstructure:"port"`
-	Username            string `mapstructure:"username"`
-	Password            string `mapstructure:"password"`
-	ExchangeName        string `mapstructure:"exchange_name"`
-	PublishTopic        string `mapstructure:"publish_topic"`
-	DeadLetterNameQueue string `mapstructure:"dead_letter_name_queue"`
-	SubscribeTopic      string `mapstructure:"subscribe_topic"`
+	Host                string `envconfig:"message_stream_host"`
+	Port                string `envconfig:"message_stream_port"`
+	Username            string `envconfig:"message_stream_username"`
+	Password            string `envconfig:"message_stream_password"`
+	ExchangeName        string `envconfig:"message_stream_exchange_name"`
+	PublishTopic        string `envconfig:"message_stream_publish_topic"`
+	DeadLetterNameQueue string `envconfig:"message_stream_dead_letter_name_queue"`
+	SubscribeTopic      string `envconfig:"message_stream_subscribe_topic"`
 }
 
 type RedisConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            string        `mapstructure:"port"`
-	Username        string        `mapstructure:"username"`
-	Password        string        `mapstructure:"password"`
-	DB              int           `mapstructure:"db"`
-	MaxRetries      int           `mapstructure:"max_retries"`
-	PoolFIFO        bool          `mapstructure:"pool_fifo"`
-	PoolSize        int           `mapstructure:"pool_size"`
-	PoolTimeout     time.Duration `mapstructure:"pool_timeout"`
-	MinIdleConns    int           `mapstructure:"min_idle_conns"`
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
-	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	Host            string        `envconfig:"redis_host"`
+	Port            string        `envconfig:"redis_port"`
+	Username        string        `envconfig:"redis_username"`
+	Password        string        `envconfig:"redis_password"`
+	DB              int           `envconfig:"redis_db"`
+	MaxRetries      int           `envconfig:"redis_max_retries"`
+	PoolFIFO        bool          `envconfig:"redis_pool_fifo"`
+	PoolSize        int           `envconfig:"redis_pool_size"`
+	PoolTimeout     time.Duration `envconfig:"redis_pool_timeout"`
+	MinIdleConns    int           `envconfig:"redis_min_idle_conns"`
+	MaxIdleConns    int           `envconfig:"redis_max_idle_conns"`
+	ConnMaxIdleTime time.Duration `envconfig:"redis_conn_max_idle_time"`
+	ConnMaxLifetime time.Duration `envconfig:"redis_conn_max_lifetime"`
 }
 
 func InitConfig() *Config {
-	// // Viper add remote provider
-	// viper.AddRemoteProvider("consul", "localhost:8500", "config/hello-service.mapstructure")
-	// viper.SetConfigType("mapstructure")
-	// err := viper.ReadRemoteConfig()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// Viper read file from path
-	viper.SetConfigName("config")
-	viper.AddConfigPath("./internal/config")
-	viper.SetConfigType("json")
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-
 	var Cfg Config
 
-	// Viper Populates the struct
-	err = viper.Unmarshal(&Cfg)
+	err := envconfig.Process("bpm_wrapper", &Cfg)
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
 	return &Cfg
 }
