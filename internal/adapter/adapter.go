@@ -332,16 +332,12 @@ func (a *adapter) CreateProcessInstance(auth *dto.LoginResponse, processId strin
 		return "", err
 	}
 
-	fmt.Println("request", request)
-
 	response, err := a.client.Do(request)
 	if err != nil {
 		return "", err
 	}
 
 	defer response.Body.Close()
-
-	fmt.Println("response status code", response.StatusCode)
 
 	responseData, err := io.ReadAll(response.Body)
 	if err != nil {

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	dtonotification "bpm-wrapper/internal/data/dto_notification"
+	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -29,6 +30,8 @@ func (u *usecase) SendNotification(body *dtonotification.Request) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("payload", string(payload))
 	id := watermill.NewUUID()
 
 	err = u.pub.Publish("send_notification_from_bpm", message.NewMessage(id, payload))
