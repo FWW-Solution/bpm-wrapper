@@ -5,6 +5,7 @@ import (
 	dtobooking "bpm-wrapper/internal/data/dto_booking"
 	"bpm-wrapper/internal/usecase"
 	"encoding/json"
+	"log"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gofiber/fiber/v2"
@@ -57,6 +58,7 @@ func (c *Controller) StartProcessBookingHandler(msg *message.Message) error {
 	_, err = c.UseCase.StartProcessBooking(processName, version, body)
 
 	if err != nil {
+		log.Println(err)
 		c.Log.Error(err)
 		msg.Ack()
 	}

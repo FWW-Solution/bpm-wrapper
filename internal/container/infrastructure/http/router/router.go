@@ -21,6 +21,9 @@ func Initialize(app *fiber.App, ctrl *controller.Controller) *fiber.App {
 	// passanger
 	v1.Put("/passenger", ctrl.UpdatePassenger)
 
+	// booking
+	v1.Put("/booking", ctrl.UpdateBooking)
+
 	// payment
 	v1.Post("/payment/invoice", ctrl.GenerateInvoice)
 	v1.Put("/payment", ctrl.UpdatePayment)

@@ -22,7 +22,6 @@ type usecase struct {
 	pub     message.Publisher
 	repo    repository.Repository
 }
-
 type Usecase interface {
 	// StartProcess
 	StartProcess(processName string, version string, body interface{}) (string, error)
@@ -48,6 +47,7 @@ type Usecase interface {
 	StartProcessBooking(processName string, version string, body dtobooking.StartProcessBookingRequest) (string, error)
 	DoPayment(body *dtopayment.DoPaymentRequest) error
 	UpdatePayment(body *dtopayment.RequestUpdatePayment) error
+	UpdateBooking(body *dtobooking.RequestUpdateBooking) error
 
 	// Ticket
 	UpdateTicket(body *dtoticket.RequestUpdateTicket) error

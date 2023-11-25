@@ -55,14 +55,14 @@ type BonitaConfig struct {
 }
 
 type MessageStreamConfig struct {
-	Host                string `envconfig:"message_stream_host"`
-	Port                string `envconfig:"message_stream_port"`
-	Username            string `envconfig:"message_stream_username"`
-	Password            string `envconfig:"message_stream_password"`
-	ExchangeName        string `envconfig:"message_stream_exchange_name"`
-	PublishTopic        string `envconfig:"message_stream_publish_topic"`
-	DeadLetterNameQueue string `envconfig:"message_stream_dead_letter_name_queue"`
-	SubscribeTopic      string `envconfig:"message_stream_subscribe_topic"`
+	Host                string `envconfig:"queue_host"`
+	Port                string `envconfig:"queue_port"`
+	Username            string `envconfig:"queue_username"`
+	Password            string `envconfig:"queue_password"`
+	ExchangeName        string `envconfig:"queue_exchange_name"`
+	PublishTopic        string `envconfig:"queue_publish_topic"`
+	DeadLetterNameQueue string `envconfig:"queue_dead_letter_name_queue"`
+	SubscribeTopic      string `envconfig:"queue_subscribe_topic"`
 }
 
 type RedisConfig struct {

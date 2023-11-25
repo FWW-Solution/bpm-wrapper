@@ -24,12 +24,8 @@ func Initialize(cfg *config.Config) *zap.SugaredLogger {
 	logger, _ := zap.NewProduction(
 		zapOptions...,
 	)
-	defer func() {
-		err := logger.Sync()
-		if err != nil {
-			panic(err)
-		}
-	}()
+
+	defer logger.Sync()
 	sugar := logger.Sugar()
 	return sugar
 }
