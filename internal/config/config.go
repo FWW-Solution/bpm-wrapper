@@ -63,6 +63,7 @@ type MessageStreamConfig struct {
 	PublishTopic        string `envconfig:"queue_publish_topic"`
 	DeadLetterNameQueue string `envconfig:"queue_dead_letter_name_queue"`
 	SubscribeTopic      string `envconfig:"queue_subscribe_topic"`
+	SSL                 bool   `envconfig:"queue_ssl"`
 }
 
 type RedisConfig struct {
